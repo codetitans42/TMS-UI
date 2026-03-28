@@ -7,6 +7,8 @@ reviews:
   review_status: true
   collapse_walkthrough: false
   path_filters:
+    - "README.md"
+    - ".coderabbit.yaml"
     - "src/**"
     - "public/**"
     - "styles/**"
