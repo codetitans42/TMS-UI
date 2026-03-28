@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MoreVertical, Eye, Edit2, Download, Trash2, RotateCcw, X } from "lucide-react";
 import { packagesPage } from "../../data/packagesData";
+import { Package } from "../../services/api";
 
 type TabType = "active" | "draft" | "deleted";
 
 interface PackagesTableProps {
   tab: TabType;
-  searchQuery: string;
+  packages: Package[];
+  onRefresh?: () => void;
 }
 
 const contextMenuIcons: Record<string, React.ReactNode> = {
@@ -18,20 +20,39 @@ const contextMenuIcons: Record<string, React.ReactNode> = {
   "delete-permanently": <Trash2 size={14} />,
 };
 
-export function PackagesTable({ tab, searchQuery }: PackagesTableProps) {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+function formatUpdatedAt(value?: string): { label: string; date: string } {
+  if (!value) {
+    return {
+      label: "Updated On",
+      date: "-"
+    };
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return {
+      label: "Updated On",
+      date: value
+    };
+  }
+
+  return {
+    label: "Updated On",
+    date: parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric"
+    })
+  };
+}
+
+export function PackagesTable({ tab, packages }: PackagesTableProps) {
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const filteredPackages = packagesPage.packages.filter((pkg) => {
-    const matchesTab = pkg.status === tab;
-    const matchesSearch =
-      searchQuery === "" ||
-      pkg.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pkg.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pkg.code.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  const filteredPackages = packages;
 
   const menuActions = packagesPage.contextMenus[tab];
 
@@ -45,7 +66,7 @@ export function PackagesTable({ tab, searchQuery }: PackagesTableProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleRow = (id: string) => {
+  const toggleRow = (id: number) => {
     setSelectedRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
     );
@@ -138,12 +159,20 @@ export function PackagesTable({ tab, searchQuery }: PackagesTableProps) {
 
               {/* Last Updated */}
               <td className="packages-table__td packages-table__td--last-updated px-4 py-4 text-sm text-[#374151]">
+                {(() => {
+                  const lastUpdated = formatUpdatedAt(pkg.updatedAt);
+
+                  return (
+                    <>
                 <span className="packages-table__edited-label block text-xs text-gray-400">
-                  {pkg.lastUpdated.label}
+                  {lastUpdated.label}
                 </span>
                 <span className="packages-table__edited-date">
-                  {pkg.lastUpdated.date}
+                  {lastUpdated.date}
                 </span>
+                    </>
+                  );
+                })()}
               </td>
 
               {/* Actions (3-dot menu) */}

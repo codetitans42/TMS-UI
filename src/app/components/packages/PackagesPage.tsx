@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Search, Plus } from "lucide-react";
-import { packagesApi, Package } from "../../services/api";
+import { packagesApi, Package, PackageUpsertInput } from "../../services/api";
 import { PackagesEmptyState } from "./PackagesEmptyState";
 import { PackagesTable } from "./PackagesTable";
 import { CreatePackageForm } from "./CreatePackageForm";
@@ -15,6 +15,7 @@ export function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const fetchPackages = async () => {
     try {
@@ -33,10 +34,19 @@ export function PackagesPage() {
     fetchPackages();
   }, [activeTab]);
 
-  const handleSave = () => {
-    setView("list");
-    setActiveTab("active");
-    fetchPackages();
+  const handleCreatePackage = async (data: PackageUpsertInput) => {
+    try {
+      setSaving(true);
+      setError(null);
+      const created = await packagesApi.create(data);
+      const nextTab = created.status.toLowerCase() as TabType;
+      setView("list");
+      setActiveTab(nextTab);
+    } catch (err: any) {
+      setError(err.message || "Failed to save package.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -56,7 +66,9 @@ export function PackagesPage() {
         <div className="packages-page__form-card bg-white border border-[rgba(6,127,121,0.35)] rounded-xl shadow-sm p-8">
           <CreatePackageForm
             onBack={() => setView("list")}
-            onSave={handleSave}
+            onSave={handleCreatePackage}
+            saving={saving}
+            error={error}
           />
         </div>
       </main>
