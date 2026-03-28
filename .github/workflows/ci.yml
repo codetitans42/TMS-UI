@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, stage, prod]
+  pull_request:
+    branches: [main, dev, stage, prod]
+
+jobs:
+  repo-standards:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify repository baseline
+        run: |
+          test -f README.md
+          test -f .env.example
+          test -f .coderabbit.yaml
+          test -f docs/architecture.md
+          test -f docs/environments.md
+          test -f docs/branching.md
+          test -d src
+          test -d public
+          test -d styles
+          test -d tests
+
+      - name: Block committed local env files
+        run: |
+          if find . -maxdepth 2 -type f \( -name '.env' -o -name '.env.local' -o -name '.env.production' \) | grep -q .; then
+            echo 'Committed runtime env file detected.'
+            exit 1
+          fi
