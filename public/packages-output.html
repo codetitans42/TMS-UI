@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bookings – Packages</title>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CSS Hooks — All class names follow kebab-case convention.
+       Replace values with your design tokens or Antigravity theme.
+       ═══════════════════════════════════════════════════════════════ -->
+  <style>
+    /* ── Reset ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1a1a1a; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .layout                  { display: flex; min-height: 100vh; }
+    .layout__sidebar         { width: 180px; flex-shrink: 0; position: fixed; top: 0; left: 0; height: 100vh; z-index: 20; display: flex; flex-direction: column; }
+    .layout__main            { margin-left: 180px; margin-top: 80px; flex: 1; }
+
+    /* ── Sidebar ──────────────────────────────────────────── */
+    .sidebar__logo           { height: 80px; display: flex; align-items: center; padding: 0 16px; background: #eafff9; border-bottom: 1px solid rgba(4,112,106,0.2); }
+    .sidebar__nav            { flex: 1; background: linear-gradient(to bottom, #04706a, #b8cbca); padding: 12px 8px; overflow-y: auto; }
+    .sidebar__nav-list       { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .sidebar__nav-link       { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 14px; border: none; width: 100%; text-align: left; transition: background 0.15s; }
+    .sidebar__nav-link--active   { background: linear-gradient(to right, #04706a, #b8cbca); color: white; font-weight: 600; }
+    .sidebar__nav-link--inactive { background: rgba(255,255,255,0.9); color: #1a1a1a; }
+    .sidebar__nav-link--inactive:hover { background: white; }
+    .sidebar__nav-icon       { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── Top Bar ──────────────────────────────────────────── */
+    .topbar                  { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #eafff9; border-bottom: 1px solid #04706a; z-index: 30; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+    .topbar__title           { color: #04706a; font-size: 24px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%); }
+    .topbar__right           { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+    .topbar__date            { display: flex; flex-direction: column; align-items: flex-end; }
+    .topbar__date-toggle     { display: flex; align-items: center; gap: 4px; color: #686868; font-size: 14px; background: none; border: none; }
+    .topbar__date-value      { color: #686868; font-size: 14px; }
+    .topbar__icon-btn        { color: #04706a; padding: 4px; background: none; border: none; border-radius: 4px; display: flex; align-items: center; }
+    .topbar__icon-btn:hover  { background: rgba(4,112,106,0.1); }
+    .topbar__avatar          { width: 40px; height: 40px; border-radius: 50%; background: rgba(4,112,106,0.2); display: flex; align-items: center; justify-content: center; color: #04706a; font-size: 14px; font-weight: 500; }
+
+    /* ── Packages Page ────────────────────────────────────── */
+    .packages-page           { padding: 0; }
+    .packages-page__toolbar  { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 0; gap: 16px; flex-wrap: wrap; }
+    .packages-page__tabs     { display: flex; align-items: flex-end; border-bottom: 1px solid #e5e7eb; flex: 1; }
+    .packages-page__tab      { padding: 12px 20px; font-size: 14px; border: none; border-bottom: 2px solid transparent; background: none; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+    .packages-page__tab--active   { border-bottom-color: #04706a; color: #04706a; font-weight: 600; }
+    .packages-page__tab--inactive { color: #374151; }
+    .packages-page__tab--inactive:hover { color: #04706a; }
+    .packages-page__search   { position: relative; }
+    .packages-page__search-icon  { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; width: 16px; height: 16px; }
+    .packages-page__search-input { border: 1px solid rgba(4,112,106,0.5); border-radius: 9999px; padding: 8px 16px 8px 36px; font-size: 14px; color: #374151; width: 260px; outline: none; }
+    .packages-page__search-input:focus { box-shadow: 0 0 0 2px rgba(4,112,106,0.2); border-color: #04706a; }
+    .packages-page__actions  { display: flex; justify-content: flex-end; padding: 12px 24px 8px; }
+    .packages-page__new-btn  { display: flex; align-items: center; gap: 8px; background: linear-gradient(to bottom, #04706a, #b8cbca); color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; border: none; transition: opacity 0.15s; }
+    .packages-page__new-btn:hover { opacity: 0.9; }
+    .packages-page__content  { padding: 0 24px 24px; }
+    .packages-page__card     { background: white; border: 1px solid rgba(6,127,121,0.35); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); overflow: hidden; }
+
+    /* ── Empty State ──────────────────────────────────────── */
+    .packages-empty-state            { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 24px; gap: 16px; }
+    .packages-empty-state__icon-wrap { width: 80px; height: 80px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; }
+    .packages-empty-state__heading   { font-size: 17px; font-weight: 600; color: #374151; }
+    .packages-empty-state__paragraph { font-size: 14px; color: #6b7280; text-align: center; max-width: 420px; line-height: 1.6; }
+    .packages-empty-state__btn       { display: flex; align-items: center; gap: 8px; background: linear-gradient(to bottom, #04706a, #b8cbca); color: white; padding: 12px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; transition: opacity 0.15s; }
+    .packages-empty-state__btn:hover { opacity: 0.9; }
+
+    /* ── Table ────────────────────────────────────────────── */
+    .packages-table__table   { width: 100%; border-collapse: collapse; }
+    .packages-table__header-row { background: #04706a; }
+    .packages-table__th      { text-align: left; color: white; font-size: 14px; font-weight: 500; padding: 12px 16px; white-space: nowrap; }
+    .packages-table__row     { border-bottom: 1px solid #e5e7eb; transition: background 0.1s; }
+    .packages-table__row:hover { background: #f9fafb; }
+    .packages-table__td      { padding: 14px 16px; font-size: 14px; color: #374151; vertical-align: middle; }
+    .packages-table__checkbox { width: 16px; height: 16px; accent-color: #04706a; cursor: pointer; }
+    .packages-table__edited-label { display: block; font-size: 11px; color: #9ca3af; }
+    .packages-table__action-btn   { background: none; border: none; color: #6b7280; padding: 4px; border-radius: 4px; display: flex; align-items: center; }
+    .packages-table__action-btn:hover { color: #04706a; background: #f3f4f6; }
+
+    /* ── Context Menu ─────────────────────────────────────── */
+    .context-menu            { position: absolute; right: 32px; top: 8px; z-index: 50; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); border: 1px solid #f0f0f0; min-width: 170px; overflow: hidden; }
+    .context-menu__item      { display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 14px; width: 100%; border: none; text-align: left; cursor: pointer; transition: background 0.1s; }
+    .context-menu__item--primary   { background: #04706a; color: white; }
+    .context-menu__item--primary:hover  { background: #035f55; }
+    .context-menu__item--default   { background: white; color: #374151; }
+    .context-menu__item--default:hover  { background: #f9fafb; }
+
+    /* ── Create Package Form ──────────────────────────────── */
+    .create-package-form     { }
+    .create-package-form__back-link { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #374151; background: none; border: none; cursor: pointer; padding: 0; margin-bottom: 24px; }
+    .create-package-form__back-link:hover { color: #04706a; }
+
+    /* ── Step Indicator ───────────────────────────────────── */
+    .step-indicator          { display: flex; align-items: flex-start; gap: 0; margin-bottom: 32px; }
+    .step-indicator__step    { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 80px; }
+    .step-indicator__circle  { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; border: 2px solid; transition: all 0.2s; }
+    .step-indicator__circle--active, .step-indicator__circle--completed { background: #04706a; border-color: #04706a; color: white; }
+    .step-indicator__circle--inactive { background: white; border-color: #d1d5db; color: #9ca3af; }
+    .step-indicator__label   { font-size: 12px; white-space: nowrap; }
+    .step-indicator__label--active   { color: #04706a; font-weight: 600; }
+    .step-indicator__label--completed { color: #04706a; }
+    .step-indicator__label--inactive  { color: #9ca3af; }
+    .step-indicator__connector { flex: 1; height: 2px; margin: 16px 4px 0; transition: background 0.2s; }
+    .step-indicator__connector--done    { background: #04706a; }
+    .step-indicator__connector--pending { background: #e5e7eb; }
+
+    /* ── Form Fields ──────────────────────────────────────── */
+    .form-section__title     { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 20px; }
+    .form-grid               { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-field              { display: flex; flex-direction: column; gap: 4px; }
+    .form-field__label       { font-size: 13px; color: #374151; }
+    .form-field__required    { color: #ef4444; margin-left: 2px; }
+    .form-field__input,
+    .form-field__select,
+    .form-field__textarea    { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #374151; outline: none; width: 100%; }
+    .form-field__input:focus,
+    .form-field__select:focus,
+    .form-field__textarea:focus { box-shadow: 0 0 0 2px rgba(4,112,106,0.2); border-color: #04706a; }
+    .form-field__textarea    { resize: none; }
+    .form-field__char-count  { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    .form-field__file-wrap   { position: relative; }
+    .form-field__file-input  { padding-right: 40px; color: #9ca3af; cursor: pointer; }
+    .form-field__file-btn    { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; }
+
+    /* ── Inclusion / Exclusion Panels ─────────────────────── */
+    .ie-grid                 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .ie-panel                { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+    .ie-panel__label         { font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px; }
+    .ie-panel__input         { width: 100%; border: none; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; font-size: 14px; color: #6b7280; background: transparent; outline: none; margin-bottom: 16px; }
+    .ie-panel__tags          { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter-tag              { padding: 4px 12px; border-radius: 9999px; font-size: 12px; border: 1px solid; cursor: pointer; transition: all 0.15s; }
+    .filter-tag--active      { background: #04706a; color: white; border-color: #04706a; }
+    .filter-tag--inactive    { background: white; color: #374151; border-color: #d1d5db; }
+    .filter-tag--inactive:hover { border-color: #04706a; }
+
+    /* ── Add-ons ──────────────────────────────────────────── */
+    .add-ons__title          { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 16px; }
+    .add-ons__header         { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; margin-bottom: 8px; }
+    .add-ons__col-label      { font-size: 13px; color: #6b7280; }
+    .add-ons__row            { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .add-ons__service-input,
+    .add-ons__price-input    { border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; }
+    .add-ons__price-input    { border-color: #04706a; }
+    .add-ons__circle-btn     { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #04706a; color: #04706a; background: none; display: flex; align-items: center; justify-content: center; }
+    .add-ons__circle-btn:hover { background: #04706a; color: white; }
+
+    /* ── Form Actions ─────────────────────────────────────── */
+    .form-actions            { display: flex; justify-content: space-between; margin-top: 32px; }
+    .form-actions__cancel-btn,
+    .form-actions__back-btn  { padding: 10px 24px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #6b7280; background: white; }
+    .form-actions__cancel-btn:hover,
+    .form-actions__back-btn:hover { background: #f9fafb; }
+    .form-actions__next-btn,
+    .form-actions__save-btn  { padding: 10px 32px; background: linear-gradient(to bottom, #04706a, #b8cbca); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; }
+    .form-actions__next-btn:hover,
+    .form-actions__save-btn:hover { opacity: 0.9; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .layout__sidebar       { width: 64px; }
+      .layout__main          { margin-left: 64px; }
+      .sidebar__nav-label    { display: none; }
+      .form-grid             { grid-template-columns: 1fr; }
+      .ie-grid               { grid-template-columns: 1fr; }
+      .packages-page__search-input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout" data-component="app-layout">
+
+  <!-- ══════════════════════════════════════════════
+       SIDEBAR
+       JSON key: navigation.items[]
+       ══════════════════════════════════════════════ -->
+  <aside class="layout__sidebar sidebar" data-component="sidebar">
+    <div class="sidebar__logo">
+      <!-- Logo / hamburger icon -->
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04706a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </div>
+    <nav class="sidebar__nav" aria-label="Main navigation">
+      <ul class="sidebar__nav-list">
+        <!-- data-nav-id maps to navigation.items[].id in JSON -->
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="dashboard"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Dashboard</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="bookings"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Bookings</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--active" data-nav-id="packages" aria-current="page"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Packages</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="leads"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Leads</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="itinerary"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Itinerary</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="quotation"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Quotation</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="support"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Support</span></a></li>
+        <li><a href="#" class="sidebar__nav-link sidebar__nav-link--inactive" data-nav-id="settings"><span class="sidebar__nav-icon">◻</span><span class="sidebar__nav-label">Settings</span></a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════
+       TOP BAR
+       JSON key: pageConfig
+       ══════════════════════════════════════════════ -->
+  <header class="topbar" data-component="topbar">
+    <div class="topbar__left">
+      <button class="topbar__icon-btn" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- data-content="page-title" → pageConfig.title -->
+    <h1 class="topbar__title" data-content="page-title">Bookings</h1>
+
+    <div class="topbar__right">
+      <div class="topbar__date">
+        <!-- data-content="date-label" → pageConfig.date.label -->
+        <button class="topbar__date-toggle" data-content="date-label">Today ▾</button>
+        <!-- data-content="date-value" → pageConfig.date.value -->
+        <span class="topbar__date-value" data-content="date-value">08 July 2025</span>
+      </div>
+      <button class="topbar__icon-btn" aria-label="Notifications">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button class="topbar__icon-btn" aria-label="Add new">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      </button>
+      <button class="topbar__icon-btn" aria-label="Language">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </button>
+      <!-- data-content="user-avatar" → pageConfig.userAvatar -->
+      <div class="topbar__avatar" data-content="user-avatar">AD</div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════
+       MAIN CONTENT
+       ══════════════════════════════════════════════ -->
+  <div class="layout__main">
+
+    <!-- ────────────────────────────────────────────
+         PACKAGES LIST VIEW
+         data-view="packages-list"
+         JSON key: packagesPage
+         ──────────────────────────────────────────── -->
+    <main class="packages-page" data-page="packages-list">
+
+      <!-- Tab Bar + Search -->
+      <div class="packages-page__toolbar">
+        <!-- data-component="tab-nav" → packagesPage.tabs[] -->
+        <nav class="packages-page__tabs" data-component="tab-nav" role="tablist" aria-label="Package status">
+          <button class="packages-page__tab packages-page__tab--active" role="tab" aria-selected="true" data-tab="active">Active</button>
+          <button class="packages-page__tab packages-page__tab--inactive" role="tab" aria-selected="false" data-tab="draft">Draft</button>
+          <button class="packages-page__tab packages-page__tab--inactive" role="tab" aria-selected="false" data-tab="deleted">Deleted</button>
+        </nav>
+
+        <!-- data-component="search-bar" → packagesPage.searchPlaceholder -->
+        <div class="packages-page__search" data-component="search-bar">
+          <svg class="packages-page__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="search"
+            class="packages-page__search-input"
+            placeholder="Search by Package, Destination..."
+            aria-label="Search packages"
+            data-content="search-placeholder"
+          />
+        </div>
+      </div>
+
+      <!-- New Package Action -->
+      <div class="packages-page__actions">
+        <!-- data-action="new-package" → packagesPage.newPackageButton -->
+        <button class="packages-page__new-btn" data-action="new-package">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Package
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="packages-page__content" role="tabpanel">
+
+        <!-- ── EMPTY STATE (shown when no packages) ── -->
+        <!-- data-component="packages-empty-state" → packagesPage.emptyState -->
+        <div class="packages-page__card" data-view="empty-state" style="display:none;">
+          <div class="packages-empty-state" data-component="packages-empty-state">
+            <div class="packages-empty-state__icon-wrap" aria-hidden="true">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </div>
+            <!-- data-content="empty-heading" → packagesPage.emptyState.heading -->
+            <h2 class="packages-empty-state__heading" data-content="empty-heading">No packages yet</h2>
+            <!-- data-content="empty-paragraph" → packagesPage.emptyState.paragraph -->
+            <p class="packages-empty-state__paragraph" data-content="empty-paragraph">
+              Create your first package to automatically adjust trip rates based on conditions.
+            </p>
+            <!-- data-action="create-package" → packagesPage.emptyState.button -->
+            <button class="packages-empty-state__btn" data-action="create-package">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-content="create-btn-label">Create Package</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── PACKAGES TABLE (shown when packages exist) ── -->
+        <!-- data-component="packages-table" → packagesPage.table + packagesPage.packages[] -->
+        <div class="packages-page__card" data-view="packages-table">
+          <table class="packages-table__table" data-component="packages-table">
+            <thead>
+              <tr class="packages-table__header-row">
+                <th class="packages-table__th"><input type="checkbox" class="packages-table__checkbox" aria-label="Select all" /></th>
+                <!-- data-col-id maps to packagesPage.table.columns[].id -->
+                <th class="packages-table__th" data-col-id="packageTitle">Package Title</th>
+                <th class="packages-table__th" data-col-id="code">Code</th>
+                <th class="packages-table__th" data-col-id="duration">Duration</th>
+                <th class="packages-table__th" data-col-id="destination">Destination</th>
+                <th class="packages-table__th" data-col-id="type">Type</th>
+                <th class="packages-table__th" data-col-id="lastUpdated">Last Updated</th>
+                <th class="packages-table__th"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- REPEATED BLOCK per packagesPage.packages[] item -->
+              <!-- data-pkg-id → packages[].id | data-pkg-status → packages[].status -->
+              <tr class="packages-table__row" data-pkg-id="pkg-001" data-pkg-status="active">
+                <td class="packages-table__td"><input type="checkbox" class="packages-table__checkbox" aria-label="Select PS1 - ICe Land" /></td>
+                <td class="packages-table__td packages-table__td--title">PS1 - ICe Land</td>
+                <td class="packages-table__td packages-table__td--code">Q2025-0015</td>
+                <td class="packages-table__td packages-table__td--duration">8D/ 7N</td>
+                <td class="packages-table__td packages-table__td--destination">Iceland</td>
+                <td class="packages-table__td packages-table__td--type">International</td>
+                <td class="packages-table__td packages-table__td--last-updated">
+                  <span class="packages-table__edited-label">Edited On</span>
+                  Mar 28, 2025
+                </td>
+                <td class="packages-table__td packages-table__td--actions" style="position:relative;">
+                  <button class="packages-table__action-btn" aria-label="More actions" aria-haspopup="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                  </button>
+                  <!-- CONTEXT MENU — active tab → packagesPage.contextMenus.active[] -->
+                  <div class="context-menu" data-component="context-menu" data-tab="active" role="menu" style="display:none;">
+                    <button class="context-menu__item context-menu__item--primary" data-action="view" role="menuitem">👁 View</button>
+                    <button class="context-menu__item context-menu__item--default" data-action="edit" role="menuitem">✏ Edit</button>
+                    <button class="context-menu__item context-menu__item--default" data-action="download" role="menuitem">⬇ Download</button>
+                    <button class="context-menu__item context-menu__item--default" data-action="delete" role="menuitem">🗑 Delete</button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="packages-table__row" data-pkg-id="pkg-002" data-pkg-status="active">
+                <td class="packages-table__td"><input type="checkbox" class="packages-table__checkbox" /></td>
+                <td class="packages-table__td packages-table__td--title">PS4- Dubai</td>
+                <td class="packages-table__td packages-table__td--code">Q2025-0016</td>
+                <td class="packages-table__td packages-table__td--duration">8D/ 7N</td>
+                <td class="packages-table__td packages-table__td--destination">Dubai</td>
+                <td class="packages-table__td packages-table__td--type">Domestic</td>
+                <td class="packages-table__td packages-table__td--last-updated">
+                  <span class="packages-table__edited-label">Edited On</span>
+                  Mar 28, 2025
+                </td>
+                <td class="packages-table__td packages-table__td--actions" style="position:relative;">
+                  <button class="packages-table__action-btn" aria-label="More actions">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr class="packages-table__row" data-pkg-id="pkg-003" data-pkg-status="active">
+                <td class="packages-table__td"><input type="checkbox" class="packages-table__checkbox" /></td>
+                <td class="packages-table__td packages-table__td--title">PS5 - Canada</td>
+                <td class="packages-table__td packages-table__td--code">Q2025-0017</td>
+                <td class="packages-table__td packages-table__td--duration">8D/ 7N</td>
+                <td class="packages-table__td packages-table__td--destination">Canada</td>
+                <td class="packages-table__td packages-table__td--type">International</td>
+                <td class="packages-table__td packages-table__td--last-updated">
+                  <span class="packages-table__edited-label">Edited On</span>
+                  Mar 28, 2025
+                </td>
+                <td class="packages-table__td packages-table__td--actions">
+                  <button class="packages-table__action-btn" aria-label="More actions">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <!-- END REPEATED BLOCK -->
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /.packages-page__content -->
+    </main>
+
+    <!-- ────────────────────────────────────────────
+         CREATE PACKAGE FORM (3-step wizard)
+         data-page="create-package"
+         JSON key: createPackageForm
+         ──────────────────────────────────────────── -->
+    <main class="packages-page" data-page="create-package" style="display:none;">
+      <div class="packages-page__content">
+        <div class="packages-page__card" style="padding: 32px;">
+          <div class="create-package-form" data-component="create-package-form">
+
+            <!-- Back link → createPackageForm.title -->
+            <button class="create-package-form__back-link" data-action="back-to-list">← <span data-content="form-title">Create New Pacakage</span></button>
+
+            <!-- Step Indicator → createPackageForm.steps[] -->
+            <div class="step-indicator" data-component="step-indicator">
+              <div class="step-indicator__step">
+                <div class="step-indicator__circle step-indicator__circle--active" data-step="1" aria-current="step">1</div>
+                <span class="step-indicator__label step-indicator__label--active">General Info</span>
+              </div>
+              <div class="step-indicator__connector step-indicator__connector--pending"></div>
+              <div class="step-indicator__step">
+                <div class="step-indicator__circle step-indicator__circle--inactive" data-step="2">2</div>
+                <span class="step-indicator__label step-indicator__label--inactive">Pricing</span>
+              </div>
+              <div class="step-indicator__connector step-indicator__connector--pending"></div>
+              <div class="step-indicator__step">
+                <div class="step-indicator__circle step-indicator__circle--inactive" data-step="3">3</div>
+                <span class="step-indicator__label step-indicator__label--inactive">Inclusions &amp; Exclusions</span>
+              </div>
+            </div>
+
+            <!-- STEP 1: General Information → createPackageForm.generalInfo -->
+            <section data-step="1" data-component="general-info-step">
+              <h2 class="form-section__title">General Information</h2>
+              <div class="form-grid">
+                <div class="form-field" data-field="packageCode">
+                  <label class="form-field__label" for="packageCode">Package Code<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="packageCode" type="text" value="790456" data-content="packageCode" required />
+                </div>
+                <div class="form-field" data-field="packageTitle">
+                  <label class="form-field__label" for="packageTitle">Package Title<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="packageTitle" type="text" value="Jollyo Gymkhana" data-content="packageTitle" required />
+                </div>
+                <div class="form-field" data-field="durationNight">
+                  <label class="form-field__label" for="durationNight">Duration(Night)<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="durationNight" type="number" value="3" data-content="durationNight" required />
+                </div>
+                <div class="form-field" data-field="durationDay">
+                  <label class="form-field__label" for="durationDay">Duration(Day)<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="durationDay" type="number" value="3" data-content="durationDay" required />
+                </div>
+                <div class="form-field" data-field="tripType">
+                  <label class="form-field__label" for="tripType">Trip Type<span class="form-field__required">*</span></label>
+                  <select class="form-field__select" id="tripType" data-content="tripType" required>
+                    <option selected>International</option>
+                    <option>Domestic</option>
+                  </select>
+                </div>
+                <div class="form-field" data-field="destination">
+                  <label class="form-field__label" for="destination">Destination<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="destination" type="text" value="Australia" data-content="destination" required />
+                </div>
+              </div>
+              <div class="form-field" style="margin-top:16px;" data-field="description">
+                <label class="form-field__label">Description <span style="font-weight:400;color:#9ca3af;">Optional, max 100 characters</span></label>
+                <textarea class="form-field__textarea" id="description" placeholder="Brief description of this pricing rule" rows="4" maxlength="100" data-content="description"></textarea>
+                <p class="form-field__char-count">0/100 characters</p>
+              </div>
+              <div class="form-grid" style="margin-top:16px;">
+                <div class="form-field" data-field="privacyPolicy">
+                  <label class="form-field__label">Privacy Policy</label>
+                  <div class="form-field__file-wrap">
+                    <input class="form-field__input form-field__file-input" type="text" placeholder="Attachment" readonly data-content="privacyPolicy" />
+                    <button class="form-field__file-btn" aria-label="Attach Privacy Policy">📎</button>
+                  </div>
+                </div>
+                <div class="form-field" data-field="termsAndCondition">
+                  <label class="form-field__label">Terms &amp; Condition</label>
+                  <div class="form-field__file-wrap">
+                    <input class="form-field__input form-field__file-input" type="text" placeholder="Attachment" readonly data-content="termsAndCondition" />
+                    <button class="form-field__file-btn" aria-label="Attach Terms">📎</button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="form-actions__cancel-btn" data-action="cancel">Cancel</button>
+                <button class="form-actions__next-btn" data-action="next">Next</button>
+              </div>
+            </section>
+
+            <!-- STEP 2: Pricing → createPackageForm.pricing -->
+            <section data-step="2" data-component="pricing-step" style="display:none;">
+              <h2 class="form-section__title">Pricing</h2>
+              <div class="form-grid">
+                <div class="form-field" data-field="priceAdult">
+                  <label class="form-field__label" for="priceAdult">Price(Adult)<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="priceAdult" type="text" value="Rs. 4000" data-content="priceAdult" required />
+                </div>
+                <div class="form-field" data-field="priceChild">
+                  <label class="form-field__label" for="priceChild">Price(Child)<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="priceChild" type="text" value="Rs. 1500" data-content="priceChild" required />
+                </div>
+              </div>
+              <h2 class="form-section__title" style="margin-top:24px;">Group Size</h2>
+              <div class="form-grid">
+                <div class="form-field" data-field="groupMin">
+                  <label class="form-field__label" for="groupMin">Minimum<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="groupMin" type="number" value="12" data-content="groupMin" required />
+                </div>
+                <div class="form-field" data-field="groupMax">
+                  <label class="form-field__label" for="groupMax">Maximum<span class="form-field__required">*</span></label>
+                  <input class="form-field__input" id="groupMax" type="number" value="12" data-content="groupMax" required />
+                </div>
+              </div>
+              <h2 class="form-section__title" style="margin-top:24px;">Season</h2>
+              <div class="form-grid">
+                <div class="form-field" data-field="startMonth">
+                  <label class="form-field__label" for="startMonth">Start Month<span class="form-field__required">*</span></label>
+                  <select class="form-field__select" id="startMonth" data-content="startMonth">
+                    <option>January</option><option>February</option><option>March</option>
+                    <option selected>April</option><option>May</option><option>June</option>
+                    <option>July</option><option>August</option><option>September</option>
+                    <option>October</option><option>November</option><option>December</option>
+                  </select>
+                </div>
+                <div class="form-field" data-field="endMonth">
+                  <label class="form-field__label" for="endMonth">End Month<span class="form-field__required">*</span></label>
+                  <select class="form-field__select" id="endMonth" data-content="endMonth">
+                    <option>January</option><option>February</option><option>March</option>
+                    <option>April</option><option>May</option><option selected>June</option>
+                    <option>July</option><option>August</option><option>September</option>
+                    <option>October</option><option>November</option><option>December</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="form-actions__back-btn" data-action="back">Back</button>
+                <button class="form-actions__next-btn" data-action="next">Next</button>
+              </div>
+            </section>
+
+            <!-- STEP 3: Inclusions & Exclusions → createPackageForm.inclusionsExclusions -->
+            <section data-step="3" data-component="inclusions-exclusions-step" style="display:none;">
+              <h2 class="form-section__title">Inclusion &amp; Exclusions</h2>
+              <div class="ie-grid">
+                <!-- Inclusion Panel -->
+                <div class="ie-panel" data-component="inclusion-panel">
+                  <h3 class="ie-panel__label">Inclusion</h3>
+                  <input class="ie-panel__input" type="text" placeholder="Enter inclusions" data-content="inclusionInput" />
+                  <div class="ie-panel__tags" data-component="filter-tags">
+                    <button class="filter-tag filter-tag--active" data-tag="All">All</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Domestic">Domestic</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="International">International</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Honeymoon">Honeymoon</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Solo">Solo</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Business">Business</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Party">Party</button>
+                  </div>
+                </div>
+                <!-- Exclusion Panel -->
+                <div class="ie-panel" data-component="exclusion-panel">
+                  <h3 class="ie-panel__label">Exclusion</h3>
+                  <input class="ie-panel__input" type="text" placeholder="Enter Exclusion" data-content="exclusionInput" />
+                  <div class="ie-panel__tags" data-component="filter-tags">
+                    <button class="filter-tag filter-tag--active" data-tag="All">All</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Domestic">Domestic</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="International">International</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Honeymoon">Honeymoon</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Solo">Solo</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Business">Business</button>
+                    <button class="filter-tag filter-tag--inactive" data-tag="Party">Party</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Add-ons → createPackageForm.inclusionsExclusions.addOns -->
+              <div class="add-ons" data-component="add-ons" style="margin-top:24px;">
+                <h2 class="add-ons__title">Add-ons</h2>
+                <div class="add-ons__header">
+                  <span class="add-ons__col-label">Service</span>
+                  <span class="add-ons__col-label">Price</span>
+                  <span></span>
+                </div>
+                <!-- REPEATED per add-on row -->
+                <div class="add-ons__row" data-addon-id="ao-1">
+                  <input class="add-ons__service-input" type="text" value="Break Fast" placeholder="Service name" data-content="addonService" />
+                  <input class="add-ons__price-input" type="text" value="₹400.00" placeholder="₹0.00" data-content="addonPrice" />
+                  <button class="add-ons__circle-btn" data-action="add-addon" aria-label="Add row">+</button>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button class="form-actions__back-btn" data-action="back">Back</button>
+                <button class="form-actions__save-btn" data-action="save">Save</button>
+              </div>
+            </section>
+
+          </div><!-- /.create-package-form -->
+        </div><!-- /.packages-page__card -->
+      </div><!-- /.packages-page__content -->
+    </main>
+
+  </div><!-- /.layout__main -->
+</div><!-- /.layout -->
+
+</body>
+</html>

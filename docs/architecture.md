@@ -12,3 +12,8 @@ The UI should provide modular experiences for CRM, package, itinerary, quotation
 - form validation and retry-safe submissions
 - responsive support for desktop and mobile operations
 - end-to-end smoke coverage for critical journeys
+
+## Delivery Guardrails
+
+- require pull requests for `dev`, `stage`, and `prod`
+- keep automated review and CI checks green before promotion
